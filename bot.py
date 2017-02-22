@@ -10,6 +10,7 @@ class bot(commands.bot):
                             ,description = description)
         self.TOKEN = args["token"]
         extensions = args["extensions"]
+        self.OWNER_ID = args["owner_id"]
         for e in extensions:
             self.load_extension("command_groups.{}".format(e))
 
