@@ -1,24 +1,72 @@
 import discord
 import asyncio
 from discord.ext import commands
+from utils import assign_prefix
 
-class bot(commands.bot):
+class Bot(commands.Bot):
     def __init__(self, **args):
-        prefix = args["prefix"]
-        description = args["description"]
-        super().__init__(command_prefix = commands.when_mentioned_or(prefix)
-                            ,description = description)
+        self.configs = args["configurations"]
+        default_prefix = self.configs["default_prefix"]
+        description = self.configs["description"]
+        super().__init__(command_prefix = commands.when_mentioned_or(default_prefix), description = description)
         self.TOKEN = args["token"]
-        extensions = args["extensions"]
-        self.OWNER_ID = args["owner_id"]
+        self.EMAIL   = args["email"]
+        self.PASSWORD = args["password"]
+        if self.TOKEN == None and (self.EMAIL == None or self.PASSWORD == None):
+            raise ValueError("A username and password combination or a token combination" 
+                                "is required to connect to Discord server")
+        extensions = ["core","prefix"]
         for e in extensions:
             self.load_extension("command_groups.{}".format(e))
+    
+    async def prefixate_server(self, server):
+        server_prefix = self.configs["servers"][server.id]["prefix"]
+        for member in server.members:
+            nick = member.name
+            if member.nick is not None:
+                nick = member.nick
+            new_nick = assign_prefix(nick, server_prefix)
+            if len(server_prefix)<= len(nick) and nick[:len(server_prefix)] ==  server_prefix:
+                continue
+            print("setting the prefix for {}".format(member.name))
+            try:
+                await self.change_nickname(member, new_nick)
+            except:
+                pass
 
-    def on_ready(self):
+    async def deprefixate_server(self, server):
+        server_prefix = self.configs["servers"][server.id]["prefix"]
+        for member in server.members:
+            if member.nick is not None:
+                new_nick = member.nick
+                if len(server_prefix)<=len(member.nick) \
+                    and member.nick[:len(server_prefix)] == server_prefix:
+                    new_nick = member.nick[len(server_prefix):] 
+            else:
+                new_nick = member.name
+            try:
+                await self.change_nickname(member, new_nick)
+            except:
+                pass
+
+    async def prefixate_all_servers(self):
+        for server in self.servers:
+            if server.id not in self.configs["servers"]:
+                self.configs["servers"][server.id] ={
+                    "enforce_prefix": False,
+                    "prefix": ""
+                }
+            if self.configs["servers"][server.id]["enforce_prefix"] is True:
+                await self.prefixate_server(server)
+
+    async def on_ready(self):
         print('Logging in as')
         print(self.user.name.encode('ascii', errors="backslashreplace").decode())
-        print(self.user.name.encode("ascii", errors="bachslashreplace").decode())
+        print(self.user.id.encode("ascii", errors="bachslashreplace").decode())
         print("------------")
+        await self.prefixate_all_servers()
+        print("Prefixing server members done!")
+        
 
     async def on_message(self, message):
         try:
@@ -29,4 +77,7 @@ class bot(commands.bot):
             print(e)
     
     def run(self):
-        super(bot,self).run(self.TOKEN)
+        if self.TOKEN != None:
+            super(Bot,self).run(self.TOKEN)
+        else:
+            super(Bot,self).run(email=self.EMAIL, password=self.PASSWORD)
