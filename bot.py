@@ -19,40 +19,31 @@ class Bot(commands.Bot):
         for e in extensions:
             self.load_extension("command_groups.{}".format(e))
 
-    async def prefixate_server(self, server, old_prefix = "", new_prefix = "")
+    async def prefixate_server(self, server, old_prefix = "", new_prefix = ""):
         if old_prefix == new_prefix:
             return
         for member in server.members:
             nick = member.name 
             if member.nick is not None:
                 nick = member.nick 
-                if len(nick) >= len(new_prefix) and nick[:len(new_prefix)] == new_prefix:
+                if nick is not "" and len(nick) >= len(new_prefix) and\
+                        nick[:len(new_prefix)] == new_prefix:
                     continue 
-                
+                if len(nick) >= len(old_prefix) and nick[:len(old_prefix)] == old_prefix:
+                    nick = nick[len(old_prefix):]
             new_nick = assign_prefix(nick, new_prefix)
-
-    async def prefixate_server(self, server):
-        server_prefix = self.configs["servers"][server.id]["prefix"]
-        for member in server.members:
-            nick = member.name
-            if member.nick is not None:
-                nick = member.nick
-            new_nick = assign_prefix(nick, server_prefix)
-            if len(server_prefix)<= len(nick) and nick[:len(server_prefix)] ==  server_prefix:
-                continue
-            print("setting the prefix for {}".format(member.name))
             try:
                 await self.change_nickname(member, new_nick)
             except:
                 pass
-
 
     async def prefixate_all_servers(self):
         for server in self.servers:
             if server.id not in self.configs["servers"]:
                 self.configs["servers"][server.id] ={
                     "enforce_prefix": False,
-                    "prefix": ""
+                    "prefix": "",
+                    "prefixing_done":True
                 }
             if self.configs["servers"][server.id]["enforce_prefix"] is True:
                 server_prefix = self.configs["servers"][server.id]["prefix"]
