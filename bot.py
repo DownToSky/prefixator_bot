@@ -18,7 +18,19 @@ class Bot(commands.Bot):
         extensions = ["core","prefix"]
         for e in extensions:
             self.load_extension("command_groups.{}".format(e))
-    
+
+    async def prefixate_server(self, server, old_prefix = "", new_prefix = "")
+        if old_prefix == new_prefix:
+            return
+        for member in server.members:
+            nick = member.name 
+            if member.nick is not None:
+                nick = member.nick 
+                if len(nick) >= len(new_prefix) and nick[:len(new_prefix)] == new_prefix:
+                    continue 
+                
+            new_nick = assign_prefix(nick, new_prefix)
+
     async def prefixate_server(self, server):
         server_prefix = self.configs["servers"][server.id]["prefix"]
         for member in server.members:
@@ -34,20 +46,6 @@ class Bot(commands.Bot):
             except:
                 pass
 
-    async def deprefixate_server(self, server):
-        server_prefix = self.configs["servers"][server.id]["prefix"]
-        for member in server.members:
-            if member.nick is not None:
-                new_nick = member.nick
-                if len(server_prefix)<=len(member.nick) \
-                    and member.nick[:len(server_prefix)] == server_prefix:
-                    new_nick = member.nick[len(server_prefix):] 
-            else:
-                new_nick = member.name
-            try:
-                await self.change_nickname(member, new_nick)
-            except:
-                pass
 
     async def prefixate_all_servers(self):
         for server in self.servers:
@@ -57,7 +55,8 @@ class Bot(commands.Bot):
                     "prefix": ""
                 }
             if self.configs["servers"][server.id]["enforce_prefix"] is True:
-                await self.prefixate_server(server)
+                server_prefix = self.configs["servers"][server.id]["prefix"]
+                await self.prefixate_server(serveri, new_prefix = server_prefix)
 
     async def on_ready(self):
         print('Logging in as')
